@@ -1,0 +1,10 @@
+DEBUG=True
+
+ENGINE=django.db.backends.sqlite3 #django.db.backends.postgresql
+DB_NAME=db.sqlite3
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_HOST=localhost
+DB_PORT=5432
+
+SECRET_KEY=django-insecure-xyz123
