@@ -1,5 +1,3 @@
-from email.policy import default
-
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
 
@@ -31,7 +29,6 @@ class LessonSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, attrs):
-        request = self.context["request"]
         instance = self.instance
         video_url = attrs.get("video_url", None)
         content = attrs.get("content", None)
@@ -53,6 +50,7 @@ class LessonSerializer(serializers.ModelSerializer):
 class CourseSerializer(serializers.ModelSerializer):
     instructor = UserSerializer(read_only=True)
     lessons_count = serializers.IntegerField(default=0, read_only=True)
+    is_enrolled = serializers.BooleanField(read_only=True, default=False)
 
     class Meta:
         model = Course
@@ -63,6 +61,7 @@ class CourseSerializer(serializers.ModelSerializer):
             "instructor",
             "is_published",
             "lessons_count",
+            "is_enrolled",
         )
         read_only_fields = ("is_published",)
 

@@ -20,7 +20,7 @@ class Course(BaseModel):
         enrollment = Enrollment.objects.create(course=self, user=user)
         return enrollment
 
-    def is_enrolled(self, user):
+    def get_is_enrolled(self, user):
         """
         Check if a user is enrolled in this course.
         """
