@@ -14,11 +14,23 @@ class Course(BaseModel):
     )
     is_published = models.BooleanField(default=False, verbose_name="Is Published")
 
+    def create_enrollment(self, user):
+        from enrollments.models import Enrollment
+
+        enrollment = Enrollment.objects.create(course=self, user=user)
+        return enrollment
+
     def is_enrolled(self, user):
         """
         Check if a user is enrolled in this course.
         """
         return self.enrollments.filter(user=user).exists()
+
+    def has_enrollments(self):
+        """
+        Check if the course has any enrollments.
+        """
+        return self.enrollments.exists()
 
 
 class Lesson(BaseModel):
@@ -31,7 +43,10 @@ class Lesson(BaseModel):
         on_delete=models.CASCADE,
         related_name="lessons",
         verbose_name="Course",
+        null=True,
+        blank=True,
     )
+    is_active = models.BooleanField(default=True, verbose_name="Is Active")
 
     # TODO: validation for content ot URL exists, maybe just displaying not uploaded yet
     class Meta:
