@@ -28,6 +28,9 @@ SECRET_KEY = "django-insecure-n+cx%na3c6++h_ehn*w(c$yybxm@95^b!sh4g^qi(6rkn=h$vk
 DEBUG = True
 
 ALLOWED_HOSTS = ["e-learning.shamuel.uz"]
+CSRF_TRUSTED_ORIGINS = [
+    "https://e-learning.shamuel.uz",
+]
 
 
 # Application definition
