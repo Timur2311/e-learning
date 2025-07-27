@@ -7,7 +7,7 @@ from .models import Course, Lesson
 class LessonInline(admin.StackedInline):
     model = Lesson
     extra = 1
-    fields = ("title", "description", "video_url", "is_active")
+    fields = ("title", "description", "video_url", "is_active", "content")
     show_change_link = True
 
 
