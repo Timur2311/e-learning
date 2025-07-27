@@ -1,8 +1,8 @@
+import django_filters.rest_framework
 from django.contrib.auth import get_user_model
 from django.db.models import BooleanField, Case, Count, Value, When
-from django_filters import rest_framework as filters
 from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
-from rest_framework import permissions, serializers, viewsets
+from rest_framework import filters, permissions, serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
@@ -19,8 +19,12 @@ class CourseModelViewSet(viewsets.ModelViewSet):
     model = Course
     queryset = Course.objects.filter(is_published=True).prefetch_related("enrollments")
     serializer_class = CourseSerializer
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (
+        django_filters.rest_framework.DjangoFilterBackend,
+        filters.SearchFilter,
+    )
     filterset_class = CourseFilter
+    search_fields = ("title", "description", "instructor__username")
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -51,6 +55,11 @@ class CourseModelViewSet(viewsets.ModelViewSet):
             )
         return queryset
 
+    def destroy(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or request.user.is_student:
+            raise PermissionDenied
+        return super().destroy(request, *args, **kwargs)
+
     def retrieve(self, request, *args, **kwargs):
         user = request.user
         course = self.get_object()
@@ -73,9 +82,24 @@ class CourseModelViewSet(viewsets.ModelViewSet):
             raise serializers.ValidationError(
                 "You can not publish course without lessons."
             )
+        if course.is_published:
+            raise serializers.ValidationError("Course is already published.")
         course.is_published = True
         course.save()
         return Response({"status": "course published"})
+
+    @action(detail=True, methods=["post"])
+    def unpublish(self, request, pk=None):
+        course = self.get_object()
+        if not course.lessons.exists():
+            raise serializers.ValidationError(
+                "You can not publish course without lessons."
+            )
+        if not course.is_published:
+            raise serializers.ValidationError("Course is not published.")
+        course.is_published = False
+        course.save()
+        return Response({"status": "course unpublished"})
 
     @action(detail=True, methods=["post"])
     def enroll(self, request, pk=None):
@@ -116,8 +140,12 @@ class CourseModelViewSet(viewsets.ModelViewSet):
         if user_id is None:
             raise serializers.ValidationError("user_id parameter is required.")
         user = get_object_or_404(User, pk=user_id)
-
         course = self.get_object()
+        if not user.is_student:
+            raise serializers.ValidationError("User must be a student to get progress.")
+        if not course.get_is_enrolled(user):
+            raise serializers.ValidationError("User is not enrolled in this course.")
+
         lessons_count = course.lessons.count()
         completed_lessons = LessonProgress.objects.filter(
             user=user, lesson__course=course, completed=True
@@ -137,6 +165,12 @@ class LessonViewSet(viewsets.ModelViewSet):
     queryset = Lesson.objects.all()
     serializer_class = LessonSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = (
+        django_filters.rest_framework.DjangoFilterBackend,
+        filters.SearchFilter,
+    )
+    search_fields = ("title", "description", "course__title", "course__description")
+    filterset_fields = ("course", "is_active")
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -174,3 +208,8 @@ class LessonViewSet(viewsets.ModelViewSet):
             defaults={"completed": True},
         )
         return Response({"status": "lesson completed"})
+
+    def destroy(self, request, *args, **kwargs):
+        if request.user.is_student:
+            raise PermissionDenied
+        return super().destroy(request, *args, **kwargs)

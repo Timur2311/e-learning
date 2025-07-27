@@ -32,6 +32,10 @@ class RegisterSerializer(serializers.ModelSerializer):
             password=validated_data["password"],
             role=validated_data.get("role", User.Role.STUDENT),
         )
+        if user.role == User.Role.INSTRUCTOR:
+            user.is_staff = True
+            user.is_active = True
+            user.save()
         return user
 
 

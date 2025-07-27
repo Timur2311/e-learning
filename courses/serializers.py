@@ -32,19 +32,24 @@ class LessonSerializer(serializers.ModelSerializer):
         instance = self.instance
         video_url = attrs.get("video_url", None)
         content = attrs.get("content", None)
-        if all([not video_url, not content]):
-            raise serializers.ValidationError(
-                "Either video_url or content must be provided."
-            )
+
+        request = self.context.get("request")
+        is_patch = request and request.method == "PATCH"
+        if request.user.is_student:
+            raise PermissionDenied
         if instance:
-            if instance.course.id != attrs["course"].id and instance.has_enrollments():
+            if all([not video_url, not content]) and not is_patch:
+                raise serializers.ValidationError(
+                    "Either video_url or content must be provided."
+                )
+            if (
+                instance.course.id != getattr(attrs.get("course"), "id", None)
+                and instance.course.has_enrollments()
+            ):
                 raise serializers.ValidationError(
                     "You cannot change the course of a lesson that has enrollments."
                 )
         return super().validate(attrs)
-
-    def create(self, validated_data):
-        return super().create(validated_data)
 
 
 class CourseSerializer(serializers.ModelSerializer):
